@@ -78,22 +78,29 @@ namespace FFMpegUtils
         // Creates a YUVReader and FFMpegLauncher to start playback.
         // If Source is specified in the Inspector, OnEnable will call Initialize and playback will
         // start immediately. Otherwise it can be called manually to start playback on command.
-        public void Initialize(string Source)
+        public bool Initialize(string Source)
         {
             m_yuvReader = new YUVReader();
 
             // launch
+            if (Environment.GetEnvironmentVariable(KEY) == null)
+            {
+                Debug.LogWarning("FFMPEG_DIR environment variable not set");
+                return false;
+            }
             var exec = Path.Combine(Environment.GetEnvironmentVariable(KEY), EXE);
             m_ffmpeg = FFMpegLauncher.Launch(exec, Source);
             
             if (m_ffmpeg == null)
             {
                 Debug.LogWarning("fail to launch ffmpeg");
-                return;
+                return false;
             }
 
             m_stdOutDisposable = m_ffmpeg.StdOut.BeginRead(new Byte[8192], (b, c) => m_yuvReader.Push(new ArraySegment<byte>(b, 0, c)));
             m_stdErrDisposable = m_ffmpeg.StdErr.BeginRead(new Byte[1024], (b, c) => OnRead(m_error, b, c));
+
+            return true;
         }
 
         // Allow the Material to be accessed so it can be assigned to geometry at runtime
